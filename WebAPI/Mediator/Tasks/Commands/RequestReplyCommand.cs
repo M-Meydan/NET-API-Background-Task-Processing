@@ -19,12 +19,16 @@ namespace WebAPI.Mediator.Tasks.Commands
         {
             _logger = logger;
         }
-        public async Task<string> Handle(RequestReplyCommand request, CancellationToken cancellationToken)
+        public async Task<string> Handle(RequestReplyCommand command, CancellationToken cancellationToken)
         {
+            int i = 1;
+            if (i == 0)
+                throw new System.Exception("Simulated Exception");
+
             // Simulate some background work
-            await Task.Delay(2000);
-            _logger.LogInformation($"-- Request-Reply Command executing in the background: {request.TaskInfo}");
-            return $"Task Completed: {request.TaskInfo}";
+            await Task.Delay(3000);
+            _logger.LogInformation($"   [{command.Id}] = Request-Reply Command executing in the background: {command.TaskInfo}");
+            return $"Task Completed: {command.TaskInfo}";
         }
     }
 

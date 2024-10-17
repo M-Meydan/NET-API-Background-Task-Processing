@@ -23,8 +23,8 @@ namespace WebAPI
         {
             services.AddWebApiServices(Configuration)
                     .AddMediatR(cfg => cfg.RegisterServicesFromAssembly(typeof(Startup).Assembly))
+                    .AddHttpClient()
                     .AddHostedBackgroundTaskService();
-                    
         }
         
         public void Configure(IApplicationBuilder app, IWebHostEnvironment env)

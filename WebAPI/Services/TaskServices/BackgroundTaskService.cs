@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using System.Threading;
 using System;
 using System.Collections.Concurrent;
+using Utilities;
 
 namespace WebAPI.Services.TaskServices
 {
@@ -19,6 +20,7 @@ namespace WebAPI.Services.TaskServices
         private readonly IMediator _mediator;
         private readonly IHostApplicationLifetime _applicationLifetime;
         private readonly ILogger<BackgroundTaskService> _logger;
+        private SemaphoreSlim _semaphore = new SemaphoreSlim(500);  // Limit concurrency 
 
         public BackgroundTaskService(
            Channel<IBackgroundCommand> commandChannel,
@@ -34,10 +36,10 @@ namespace WebAPI.Services.TaskServices
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
-            _applicationLifetime.ApplicationStarted.Register(() =>
+            _applicationLifetime.ApplicationStarted.Register(async () =>
             {
                 _logger.LogInformation("API fully started. Background command processing begins.");
-                StartProcessingCommands(stoppingToken);
+                await StartProcessingCommands(stoppingToken);
             });
 
             _applicationLifetime.ApplicationStopping.Register(() =>
@@ -46,32 +48,42 @@ namespace WebAPI.Services.TaskServices
             });
         }
 
-        private async void StartProcessingCommands(CancellationToken stoppingToken)
+        private async Task StartProcessingCommands(CancellationToken stoppingToken)
         {
-            await foreach (var backgroundCommand in _commandChannel.Reader.ReadAllAsync(stoppingToken))
-            {
-                try
+                await foreach (var backgroundCommand in _commandChannel.Reader.ReadAllAsync(stoppingToken))
                 {
-                    _logger.LogInformation($"Processing command: {backgroundCommand.GetType().Name}");
+                    await _semaphore.WaitAsync(stoppingToken);  // Acquire semaphore before starting a new task
 
-                    // If the command is fire-and-forget
-                    if (backgroundCommand is BackgroundCommand<Unit> fireAndForgetCommand)
+                    _ = Task.Run(async () =>
                     {
-                        await _mediator.Send(fireAndForgetCommand);
-                    }
-                    else // If the command is request-reply
-                    {
-                        var result = await _mediator.Send(backgroundCommand);
-                        backgroundCommand.SetResult(result);
-                    }
+                        try
+                        {
+                            _logger.LogInformation($"Processing background command [{backgroundCommand.Id}]: {backgroundCommand.GetType().Name}");
+
+                            // If the command is fire-and-forget
+                            if (backgroundCommand is BackgroundCommand<Unit> fireAndForgetCommand)
+                            {
+                                await _mediator.Send(fireAndForgetCommand);  // Fire-and-forget command
+                            }
+                            else // If the command is request-reply
+                            {
+                                var result = await _mediator.Send(backgroundCommand);
+                                backgroundCommand.SetResult(result);  // Set result for request-reply command
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            _logger.LogError(ex, ex.Message);
+                            backgroundCommand.SetException(ex);  // Set exception for failed commands
+                        }
+                        finally
+                        {
+                            _semaphore.Release();  // Release semaphore when done
+                        }
+                    }, stoppingToken);
                 }
-                catch (Exception ex)
-                {
-                    _logger.LogError(ex, "Error processing command.");
-                    backgroundCommand.SetException(ex);
-                }
-            }
         }
+
     }
 
 }

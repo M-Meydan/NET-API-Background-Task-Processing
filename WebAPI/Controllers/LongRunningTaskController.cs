@@ -1,13 +1,12 @@
 ﻿using MediatR;
 using Microsoft.AspNetCore.Mvc;
-using System.Threading.Channels;
-using System.Threading.Tasks;
-using System;
-using WebAPI.Mediator.Tasks.Commands;
-using WebAPI.Services.TaskServices;
 using Microsoft.Extensions.Logging;
+using System;
+using System.Threading.Tasks;
+using WebAPI.Mediator.Tasks.Commands;
 using WebAPI.Mediator.Tasks.Queries;
 using WebAPI.Models;
+using WebAPI.Services.TaskServices;
 
 namespace WebAPI.Controllers
 {
@@ -15,28 +14,28 @@ namespace WebAPI.Controllers
     [Route("api/[controller]")]
     public class LongRunningTaskController : ControllerBase
     {
-        private readonly ILogger<FireAndForgetController> _logger;
+        private readonly ILogger<LongRunningTaskController> _logger;
        
         private readonly IBackgroundMediator _backgroundMediator;
         private readonly IMediator _mediator;
 
-        public LongRunningTaskController(IBackgroundMediator backgroundMediator, IMediator mediator)
+        public LongRunningTaskController(IBackgroundMediator backgroundMediator, IMediator mediator, ILogger<LongRunningTaskController> logger)
         {
             _backgroundMediator = backgroundMediator;
             _mediator = mediator;
+            _logger = logger;
         }
 
         [HttpPost("start")]
-        public async Task<IActionResult> StartLongRunningTask([FromBody] LongRunningTaskRequest request)
+        public async Task<IActionResult> LongRunningTask([FromBody] LongRunningTaskRequest request)
         {
-            var command = new LongRunningTaskCommand
-            {
-                TaskInfo = request.TaskInfo,
-                TaskId = Guid.NewGuid(),  
-                SimulateError = request.SimulateError
-            };
+            _logger.LogInformation("Starting LongRunningTask()");
 
+            _logger.LogInformation(" Fired LongRunningTaskCommand command.");
+            var command = new LongRunningTaskCommand(request.TaskInfo, Guid.NewGuid(), request.SimulateError);
             await _backgroundMediator.SendAsync(command);
+
+            _logger.LogInformation("Finished LongRunningTask()");
 
             // Return the TaskId for querying the progress
             return Ok(new { TaskId = command.TaskId });

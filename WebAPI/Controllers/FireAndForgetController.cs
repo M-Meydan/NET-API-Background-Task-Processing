@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
+using System;
 using System.Threading.Channels;
 using System.Threading.Tasks;
 using WebAPI.Mediator.Tasks.Commands;
@@ -20,14 +21,15 @@ namespace WebAPI.Controllers
         }
 
         [HttpPost("start")]
-        public async Task<IActionResult> StartFireAndForgetTask([FromBody] string taskInfo)
+        public async Task<IActionResult> FireAndForgetTask([FromBody] string taskInfo)
         {
+            _logger.LogInformation("Starting FireAndForgetTask()");
+
             var command = new FireAndForgetCommand { TaskInfo = taskInfo };
-
             await _backgroundMediator.SendAsync(command);
+            _logger.LogInformation($" Fired [{command.Id}] Fire-and-Forget command.");
 
-            _logger.LogInformation("Fire-and-Forget method executing.");
-
+            _logger.LogInformation("Finished FireAndForgetTask()");
             return Ok(taskInfo);
         }
     }

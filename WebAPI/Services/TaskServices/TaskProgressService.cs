@@ -27,9 +27,7 @@ namespace WebAPI.Services.TaskServices
         public void StartTracking(Guid taskId, string taskName)
         {
             if (_taskProgress.Count >= MaxTasks)
-            {
                 RemoveOldestTask();
-            }
 
             _taskProgress.GetOrAdd(taskId, new TaskProgressResponse(taskId)
             {

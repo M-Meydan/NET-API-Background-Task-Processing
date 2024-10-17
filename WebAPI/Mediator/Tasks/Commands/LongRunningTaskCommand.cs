@@ -9,9 +9,15 @@ namespace WebAPI.Mediator.Tasks.Commands
 {
     public class LongRunningTaskCommand : BackgroundCommand<Unit>
     {
+        public LongRunningTaskCommand(string taskInfo, Guid guid, bool simulateError)
+        {
+            TaskInfo = taskInfo;
+            TaskId = guid;
+            SimulateError = simulateError;
+        }
+
         public Guid TaskId { get; set; } = Guid.NewGuid();
         public string TaskInfo { get; set; }
-
         public bool SimulateError { get; set; } = false;
 
         public class LongRunningTaskCommandHandler : IRequestHandler<LongRunningTaskCommand, Unit>
@@ -25,10 +31,10 @@ namespace WebAPI.Mediator.Tasks.Commands
                 _logger = logger;
             }
 
-            public async Task<Unit> Handle(LongRunningTaskCommand request, CancellationToken cancellationToken)
+            public async Task<Unit> Handle(LongRunningTaskCommand command, CancellationToken cancellationToken)
             {
                 // Start tracking task progress
-                _taskProgressService.StartTracking(request.TaskId, request.TaskInfo);
+                _taskProgressService.StartTracking(command.TaskId, command.TaskInfo);
 
                 try
                 {
@@ -40,35 +46,35 @@ namespace WebAPI.Mediator.Tasks.Commands
                         await System.Threading.Tasks.Task.Delay(3000, cancellationToken); // Simulate work delay
 
                         // Report progress and append status message
-                        string progressMessage = $"Task {request.TaskInfo} is {i}% complete";
-                        _taskProgressService.ReportProgress(request.TaskId, i, progressMessage);
+                        var progressMessage = $"Task {command.TaskInfo} is {i}% complete";
+                        _taskProgressService.ReportProgress(command.TaskId, i, progressMessage);
 
                         _logger.LogInformation(progressMessage);
 
                         // Simulate an error at 60% progress
-                        if (i == 60 && request.SimulateError)
+                        if (i == 60 && command.SimulateError)
                         {
-                            string errorMessage = $"Error occurred during {request.TaskInfo}";
-                            _taskProgressService.ReportError(request.TaskId, errorMessage);
+                            var errorMessage = $"Error occurred during {command.TaskInfo}";
+                            _taskProgressService.ReportError(command.TaskId, errorMessage);
                             throw new Exception(errorMessage);
                         }
                     }
 
                     // Report task completion
-                    _taskProgressService.ReportProgress(request.TaskId, 100, "Task Completed Successfully");
-                    _logger.LogInformation($"Task {request.TaskInfo} completed successfully.");
+                    _taskProgressService.ReportProgress(command.TaskId, 100, "Task Completed Successfully");
+                    _logger.LogInformation($"Task {command.TaskInfo} completed successfully.");
                 }
                 catch (OperationCanceledException)
                 {
                     // Handle task cancellation
-                    _logger.LogWarning($"Task {request.TaskId} was canceled.");
-                    _taskProgressService.ReportError(request.TaskId, "Task was canceled.");
+                    _logger.LogWarning($"Task {command.TaskId} was canceled.");
+                    _taskProgressService.ReportError(command.TaskId, "Task was canceled.");
                 }
                 catch (Exception ex)
                 {
                     // Handle task error
-                    _logger.LogError(ex, $"Task {request.TaskId} failed.");
-                    _taskProgressService.ReportError(request.TaskId, $"Task failed: {ex.Message}");
+                    _logger.LogError(ex, $"Task {command.TaskId} failed.");
+                    _taskProgressService.ReportError(command.TaskId, $"Task failed: {ex.Message}");
                 }
 
                 return Unit.Value;

@@ -6,6 +6,7 @@ namespace WebAPI.Services.TaskServices
 {
     public interface IBackgroundCommand
     {
+        Guid Id { get; set; }
         Task Completion { get; }          
         void SetResult(object result);  
         void SetException(Exception ex);  
@@ -14,6 +15,7 @@ namespace WebAPI.Services.TaskServices
 
     public class BackgroundCommand<TResponse> : IRequest<TResponse>, IBackgroundCommand
     {
+        public Guid Id { get; set; } = Guid.NewGuid();
         private readonly TaskCompletionSource<TResponse> _taskCompletionSource = new();
 
         /// <summary>

@@ -19,13 +19,16 @@ namespace WebAPI.Mediator.Tasks.Commands
                 _logger = logger;
             }
 
-            public async Task<Unit> Handle(FireAndForgetCommand request, CancellationToken cancellationToken)
+            public async Task<Unit> Handle(FireAndForgetCommand command, CancellationToken cancellationToken)
             {
-                // Simulate some background work
-                await System.Threading.Tasks.Task.Delay(2000);
-                _logger.LogInformation($"-- Fire-and-Forget Command executing in the background: {request.TaskInfo}");
+                int i = 1;
+                if (i == 0)
+                    throw new System.Exception("Simulated Exception");
 
-                // Return Unit.Value to signify completion
+                // Simulate some background work
+                await System.Threading.Tasks.Task.Delay(3000);
+                _logger.LogInformation($"   [{command.Id}] = Fire-and-Forget Command executing: {command.TaskInfo}");
+
                 return Unit.Value;
             }
         }
