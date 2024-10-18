@@ -32,7 +32,8 @@ namespace WebAPI.Controllers
             _logger.LogInformation("Starting LongRunningTask()");
 
             _logger.LogInformation(" Fired LongRunningTaskCommand command.");
-            var command = new LongRunningTaskCommand(request.TaskInfo, Guid.NewGuid(), request.SimulateError);
+            var taskId = Guid.NewGuid();
+            var command = new LongRunningTaskCommand(request.TaskInfo, taskId, request.SimulateError);
             await _backgroundMediator.SendAsync(command);
 
             _logger.LogInformation("Finished LongRunningTask()");

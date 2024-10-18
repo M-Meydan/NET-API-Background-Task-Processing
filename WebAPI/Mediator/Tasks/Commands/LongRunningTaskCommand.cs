@@ -60,8 +60,6 @@ namespace WebAPI.Mediator.Tasks.Commands
                         }
                     }
 
-                    // Report task completion
-                    _taskProgressService.ReportProgress(command.TaskId, 100, "Task Completed Successfully");
                     _logger.LogInformation($"Task {command.TaskInfo} completed successfully.");
                 }
                 catch (OperationCanceledException)
